@@ -1,8 +1,11 @@
 package com.hitesh.springboottemplate.controller;
 
+import com.hitesh.springboottemplate.entities.Users;
 import com.hitesh.springboottemplate.modals.JWTRequest;
 import com.hitesh.springboottemplate.modals.JWTResponse;
+import com.hitesh.springboottemplate.repository.UserRepository;
 import com.hitesh.springboottemplate.security.JwtHelper;
+import com.hitesh.springboottemplate.services.UserServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +33,11 @@ public class AuthController {
 
     private Logger logger = LoggerFactory.getLogger(AuthController.class);
 
+    @Autowired
+    private UserServices userServices;
+    @Autowired
+    private UserRepository userRepository;
+
 
     @PostMapping("/login")
     public ResponseEntity<JWTResponse> login(@RequestBody JWTRequest request) {
@@ -41,7 +49,31 @@ public class AuthController {
         JWTResponse response = JWTResponse
                 .builder()
                 .token(token)
+                .message("Login Success!!")
+                .responseCode(HttpStatus.OK.toString())
                 .email(userDetails.getUsername()).build();
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/create-user")
+    public ResponseEntity<JWTResponse> RegisterUser(@RequestBody Users user){
+        // add check for username exists in a DB
+        if(userRepository.existsUsersByUsername(user.getUsername())){
+            JWTResponse response = JWTResponse.builder().message("Username is already taken!").responseCode(HttpStatus.BAD_REQUEST.toString()
+            ).token("").email(user.getUsername()).build();
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        final UserDetails userDetails = userServices.createUser(user);;
+        final String token = helper.generateToken(userDetails);
+
+        JWTResponse response = JWTResponse
+                .builder()
+                .token(token)
+                .email(user.getUsername())
+                .message("User Registered Successfully")
+                .responseCode(HttpStatus.OK.toString())
+                .build();
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
